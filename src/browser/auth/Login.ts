@@ -585,7 +585,7 @@ export class Login {
 
     async verifyBingSession(page: Page) {
         const url =
-            'https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F'
+            'https://cn.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fcn.bing.com%2F'
         const loopMax = 5
 
         this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Verifying Bing session')
@@ -605,7 +605,7 @@ export class Login {
                 }
 
                 const u = new URL(page.url())
-                const atBingHome = u.hostname === 'www.bing.com' && u.pathname === '/'
+                const atBingHome = u.hostname === 'cn.bing.com' && u.pathname === '/'
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'LOGIN-BING',
@@ -657,7 +657,7 @@ export class Login {
                 this.bot.logger.debug(this.bot.isMobile, 'GET-REWARD-SESSION', `Token fetch loop ${i + 1}/${loopMax}`)
 
                 const u = new URL(page.url())
-                const atRewardHome = u.hostname === 'rewards.bing.com' && u.pathname === '/'
+                const atRewardHome = u.hostname === 'rewards.bing.com' && (u.pathname === '/' || u.pathname === '/dashboard')
 
                 if (atRewardHome) {
                     await this.bot.browser.utils.tryDismissAllMessages(page)

@@ -25,6 +25,7 @@ import { sendDiscord, flushDiscordQueue } from './logging/Discord'
 import { sendNtfy, flushNtfyQueue } from './logging/Ntfy'
 import type { DashboardData } from './interface/DashboardData'
 import type { AppDashboardData } from './interface/AppDashBoardData'
+import { PanelFlyoutData } from './interface/PanelFlyoutData'
 
 interface ExecutionContext {
     isMobile: boolean
@@ -80,6 +81,7 @@ export class MicrosoftRewardsBot {
     public mainDesktopPage!: Page
 
     public userData: UserData
+    public panelData!: PanelFlyoutData
 
     public rewardsVersion: 'legacy' | 'modern' = 'legacy'
 
@@ -410,6 +412,7 @@ export class MicrosoftRewardsBot {
 
                 const data: DashboardData = await this.browser.func.getDashboardData()
                 const appData: AppDashboardData = await this.browser.func.getAppDashboardData()
+                this.panelData = await this.browser.func.getPanelFlyoutData()
 
                 // Set geo
                 this.userData.geoLocale =
@@ -438,6 +441,8 @@ export class MicrosoftRewardsBot {
                         browserEarnable.mobileSearchPoints
                     } | App: ${appEarnable?.totalEarnablePoints ?? 0} | ${accountEmail} | locale: ${this.userData.geoLocale}`
                 )
+
+                await this.workers.doOtherPromotions();
 
                 if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)
                 if (this.config.workers.doDailySet) await this.workers.doDailySet(data, this.mainMobilePage)

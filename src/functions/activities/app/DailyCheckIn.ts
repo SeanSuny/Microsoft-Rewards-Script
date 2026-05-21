@@ -116,9 +116,11 @@ export class DailyCheckIn extends Workers {
                 amount: 1,
                 type: type,
                 attributes: {
-                    offerid: 'Gamification_Sapphire_DailyCheckIn'
+                    // offerid: 'Gamification_Sapphire_DailyCheckIn',
                 },
-                country: this.bot.userData.geoLocale
+                country: this.bot.userData.geoLocale,
+                channel: 'SAIOS',
+                risk_context: {},
             }
 
             this.bot.logger.debug(
@@ -136,8 +138,11 @@ export class DailyCheckIn extends Workers {
                         'Bing/32.5.431027001 (com.microsoft.bing; build:431027001; iOS 17.6.1) Alamofire/5.10.2',
                     'Content-Type': 'application/json',
                     'X-Rewards-Country': this.bot.userData.geoLocale,
-                    'X-Rewards-Language': 'en',
-                    'X-Rewards-ismobile': 'true'
+                    'X-Rewards-Language': 'zh',
+                    'X-Rewards-IsMobile': '',
+                    'X-Rewards-AppId': 'SAIOS/32.5.431027001',
+                    'X-Rewards-PartnerId': 'startapp',
+                    'X-Rewards-Flights': 'rwgobig'
                 },
                 data: JSON.stringify(jsonData)
             }

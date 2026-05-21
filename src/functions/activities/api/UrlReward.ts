@@ -1,5 +1,6 @@
 import type { AxiosRequestConfig } from 'axios'
 import type { BasePromotion } from '../../../interface/DashboardData'
+import type { PanelFlyoutData } from '../../../interface/PanelFlyoutData'
 import { Workers } from '../../Workers'
 
 export class UrlReward extends Workers {
@@ -11,17 +12,35 @@ export class UrlReward extends Workers {
 
     private oldBalance: number = this.bot.userData.currentPoints
 
+    private panelData: PanelFlyoutData = this.bot.panelData
+
     public async doUrlReward(promotion: BasePromotion) {
-        if (!this.bot.requestToken && this.bot.rewardsVersion === 'legacy') {
+        // if (!this.bot.requestToken && this.bot.rewardsVersion === 'legacy') {
+        //     this.bot.logger.warn(
+        //         this.bot.isMobile,
+        //         'URL-REWARD',
+        //         'Skipping: Request token not available, this activity requires it!'
+        //     )
+        //     return
+        // }
+
+        const offerId = promotion.offerId
+
+        const todayKey = this.bot.utils.getFormattedDate()
+
+        // find promotion in panelData promotions or flyoutResult.morePromotions
+        const panelPromotion =
+            this.panelData.flyoutResult.morePromotions.find(p => p.offerId === offerId) ||
+            this.panelData.flyoutResult.dailySetPromotions[todayKey]?.find(p => p.offerId === offerId)
+
+        if (!panelPromotion) {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'URL-REWARD',
-                'Skipping: Request token not available, this activity requires it!'
+                `Promotion not found in panel data | offerId=${offerId}`
             )
             return
         }
-
-        const offerId = promotion.offerId
 
         this.bot.logger.info(
             this.bot.isMobile,
@@ -46,33 +65,56 @@ export class UrlReward extends Workers {
                 `Prepared UrlReward headers | offerId=${offerId} | cookieLength=${this.cookieHeader.length} | fingerprintHeaderKeys=${Object.keys(this.fingerprintHeader).length}`
             )
 
-            const formData = new URLSearchParams({
-                id: offerId,
-                hash: promotion.hash,
-                timeZone: '60',
-                activityAmount: '1',
-                dbs: '0',
-                form: '',
-                type: '',
-                __RequestVerificationToken: this.bot.requestToken
-            })
+            // const formData = new URLSearchParams({
+            //     id: offerId,
+            //     hash: promotion.hash,
+            //     timeZone: '60',
+            //     activityAmount: '1',
+            //     dbs: '0',
+            //     form: '',
+            //     type: '',
+            //     __RequestVerificationToken: this.bot.requestToken
+            // })
+
+            const jsonData = {
+                ActivityCount: 1,
+                ActivityType: panelPromotion.activityType,
+                ActivitySubType: "",
+                OfferId: offerId,
+                AuthKey: panelPromotion.hash,
+                Channel: this.panelData.channel,
+                PartnerId: this.panelData.partnerId,
+                UserId: this.panelData.userId,
+            }
 
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Prepared UrlReward form data | offerId=${offerId} | hash=${promotion.hash} | timeZone=60 | activityAmount=1`
+                `Prepared UrlReward form data | offerId=${offerId} | hash=${panelPromotion.hash} | timeZone=60 | activityAmount=1`
             )
 
+            // const request: AxiosRequestConfig = {
+            //     url: 'https://rewards.bing.com/api/reportactivity?X-Requested-With=XMLHttpRequest',
+            //     method: 'POST',
+            //     headers: {
+            //         ...(this.bot.fingerprint?.headers ?? {}),
+            //         Cookie: this.cookieHeader,
+            //         Referer: 'https://rewards.bing.com/',
+            //         Origin: 'https://rewards.bing.com'
+            //     },
+            //     data: formData
+            // }
+
             const request: AxiosRequestConfig = {
-                url: 'https://rewards.bing.com/api/reportactivity?X-Requested-With=XMLHttpRequest',
+                url: 'https://cn.bing.com/msrewards/api/v1/reportactivity',
                 method: 'POST',
-                headers: {
-                    ...(this.bot.fingerprint?.headers ?? {}),
-                    Cookie: this.cookieHeader,
-                    Referer: 'https://rewards.bing.com/',
-                    Origin: 'https://rewards.bing.com'
-                },
-                data: formData
+                // headers: {
+                //     ...(this.bot.fingerprint?.headers ?? {}),
+                //     Accept: '*/*',
+                //     "Content-Type": 'text/plain;charset=UTF-8',
+                //     Origin: 'https://cn.bing.com',
+                // },
+                data: jsonData
             }
 
             this.bot.logger.debug(

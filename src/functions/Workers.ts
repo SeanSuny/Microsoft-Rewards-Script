@@ -8,6 +8,8 @@ import type {
     PurplePromotionalItem
 } from '../interface/DashboardData'
 import type { AppDashboardData } from '../interface/AppDashBoardData'
+import type { AxiosRequestConfig } from 'axios'
+import { randomUUID } from 'crypto'
 
 export class Workers {
     public bot: MicrosoftRewardsBot
@@ -71,6 +73,183 @@ export class Workers {
         await this.solveActivities(activitiesUncompleted, page)
 
         this.bot.logger.info(this.bot.isMobile, 'MORE-PROMOTIONS', 'All "More Promotion" items have been completed')
+    }
+
+    public async doOtherPromotions() {
+        try {
+            const request: AxiosRequestConfig = {
+                url: 'https://prod.rewardsplatform.microsoft.com/dapi/me?channel=SAIOS&options=612',
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${this.bot.accessToken}`,
+                    'User-Agent':
+                        'Bing/32.5.431027001 (com.microsoft.bing; build:431027001; iOS 17.6.1) Alamofire/5.10.2',
+                    'X-Rewards-Country': this.bot.userData.geoLocale,
+                    'X-Rewards-Language': 'zh',
+                    'X-Rewards-IsMobile': '',
+                    'X-Rewards-AppId': 'SAIOS/32.5.431027001',
+                    'X-Rewards-PartnerId': 'startapp',
+                    'X-Rewards-Flights': 'rwgobig'
+                },
+            }
+
+            const response = await this.bot.axios.request(request)
+
+            if (response.data.code != 0) {
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'GET-OTHER-PROMOTION-DATA',
+                    `API responded with non-zero code: ${response.data.code}`
+                )
+                return;
+            }
+
+            const activitiesUncompleted: Record<string, any>[] =
+                (response.data.response.promotions as Record<string, any>[])?.filter(x => {
+                    if (x.attributes.complete == 'True') return false
+                    if (x.attributes.max <= 0) return false
+                    if (x.attributes.State == 'locked') return false
+                    if (!x.attributes.type) return false
+                    if (x.attributes.hidden == 'True') return false
+                    if (x.attributes.type != 'urlreward') return false
+
+                    return true
+                }) ?? []
+
+            let oldBalance = this.bot.userData.currentPoints
+            let totalGainedPoints = 0
+
+            this.bot.logger.info(
+                this.bot.isMobile,
+                'OTHER-PROMOTIONS',
+                `Current balance before processing | oldBalance=${oldBalance}`
+            )
+
+            if (!activitiesUncompleted.length) {
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'OTHER-PROMOTIONS',
+                    'All "Other Promotions" items have already been completed'
+                )
+                return
+            }
+
+            this.bot.logger.info(
+                this.bot.isMobile,
+                'OTHER-PROMOTIONS',
+                `Started solving ${activitiesUncompleted.length} "Other Promotions" items`
+            )
+
+            for (const activity of activitiesUncompleted) {
+                try {
+                    const offerId = activity.attributes.offerid
+
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        'OTHER-PROMOTIONS',
+                        `Starting activity | offerId=${offerId} | oldBalance=${oldBalance}`
+                    )
+
+                    const jsonData = {
+                        id: randomUUID(),
+                        amount: 1,
+                        type: 101,
+                        attributes: {
+                            offerid: offerId,
+                        },
+                        country: this.bot.userData.geoLocale,
+                        channel: 'SAIOS',
+                        risk_context: {},
+                    }
+
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'OTHER-PROMOTIONS',
+                        `Prepared activity payload | offerId=${offerId} | id=${jsonData.id} | amount=${jsonData.amount} | type=${jsonData.type} | country=${jsonData.country}`
+                    )
+
+                    const request: AxiosRequestConfig = {
+                        url: 'https://prod.rewardsplatform.microsoft.com/dapi/me/activities',
+                        method: 'POST',
+                        headers: {
+                            Authorization: `Bearer ${this.bot.accessToken}`,
+                            'User-Agent':
+                                'Bing/32.5.431027001 (com.microsoft.bing; build:431027001; iOS 17.6.1) Alamofire/5.10.2',
+                            'Content-Type': 'application/json',
+                            'X-Rewards-Country': this.bot.userData.geoLocale,
+                            'X-Rewards-Language': 'zh',
+                            'X-Rewards-IsMobile': '',
+                            'X-Rewards-AppId': 'SAIOS/32.5.431027001',
+                            'X-Rewards-PartnerId': 'startapp',
+                            'X-Rewards-Flights': 'rwgobig'
+                        },
+                        data: JSON.stringify(jsonData)
+                    }
+
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'OTHER-PROMOTIONS',
+                        `Sending activity request | offerId=${offerId} | url=${request.url}`
+                    )
+
+                    const response = await this.bot.axios.request(request)
+
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'OTHER-PROMOTIONS',
+                        `Received activity response | offerId=${offerId} | status=${response.status}`
+                    )
+
+                    const newBalance = Number(response?.data?.response?.balance ?? oldBalance)
+                    const gainedPoints = newBalance - oldBalance
+
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'OTHER-PROMOTIONS',
+                        `Balance delta after activity | offerId=${offerId} | oldBalance=${oldBalance} | newBalance=${newBalance} | gainedPoints=${gainedPoints}`
+                    )
+
+                    if (gainedPoints > 0) {
+                        totalGainedPoints += gainedPoints
+                        this.bot.userData.currentPoints = newBalance
+                        this.bot.userData.gainedPoints = (this.bot.userData.gainedPoints ?? 0) + gainedPoints
+
+                        this.bot.logger.info(
+                            this.bot.isMobile,
+                            'OTHER-PROMOTIONS',
+                            `Completed activity | offerId=${offerId} | gainedPoints=${gainedPoints} | oldBalance=${oldBalance} | newBalance=${newBalance}`,
+                            'green'
+                        )
+                    } else {
+                        this.bot.logger.warn(
+                            this.bot.isMobile,
+                            'OTHER-PROMOTIONS',
+                            `Completed activity with no points | offerId=${offerId} | oldBalance=${oldBalance} | newBalance=${newBalance}`
+                        )
+                    }
+
+                    // Update oldBalance for next iteration
+                    oldBalance = newBalance
+
+                    // Cooldown between requests
+                    await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 15000))
+                } catch (error) {
+                    this.bot.logger.error(
+                        this.bot.isMobile,
+                        'OTHER-PROMOTIONS',
+                        `Error while solving activity | offerId=${activity.attributes.offerid} | message=${error instanceof Error ? error.message : String(error)}`
+                    )
+                }
+            }
+
+            this.bot.logger.info(
+                this.bot.isMobile,
+                'OTHER-PROMOTIONS',
+                `All "Other Promotions" items have been completed | totalGainedPoints=${totalGainedPoints} | finalBalance=${this.bot.userData.currentPoints}`
+            )
+        } catch (error) {
+            this.bot.logger.warn(this.bot.isMobile, 'GET-OTHER-PROMOTION-DATA', 'API failed')
+        }
     }
 
     public async doAppPromotions(data: AppDashboardData) {
