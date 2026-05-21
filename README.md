@@ -13,6 +13,7 @@
 
 - [Quick Setup](#quick-setup)
 - [Nix Setup](#nix-setup)
+- [What's New in 3.1.4](#whats-new-in-314)
 - [Configuration Options](#configuration-options)
 - [Account Setup](#account-setup)
 - [Troubleshooting](#troubleshooting)
@@ -94,6 +95,20 @@ ACCOUNT_1_PASSWORD=your_password
 ## Nix Setup
 
 If using Nix: `bash scripts/nix/run.sh`
+
+---
+
+## What's New in 3.1.4
+
+This release adds support for more Microsoft Rewards activity sources and updates several reward-completion requests to use newer Bing/Rewards app endpoints.
+
+- **More automatic rewards:** the script now checks an additional “Other Promotions” rewards feed and attempts eligible URL reward activities automatically. No new config is required; these items appear in logs as `OTHER-PROMOTIONS`.
+- **Improved URL reward handling:** URL rewards now use Bing Rewards panel data to match the correct offer metadata before reporting completion.
+- **Updated activity APIs:** Find Clippy, Double Search Points, Daily Check-In, and some quiz/reporting requests were moved to newer Rewards/Bing endpoints to improve reliability with current Microsoft Rewards responses.
+- **Bing session verification updates:** sign-in verification and related Bing requests now use the same Bing endpoint family as the updated reward calls. Seeing `cn.bing.com` in logs is expected.
+- **Dependency refresh:** browser automation and supporting packages were updated, including patchright. After pulling this release on bare metal, rerun `npm run pre-build` before building/running.
+
+V3.x still may not fully support the new Bing Rewards interface, so use the existing caution above as the source of truth if activities behave inconsistently.
 
 ---
 
