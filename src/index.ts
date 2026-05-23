@@ -51,7 +51,7 @@ const executionContext = new AsyncLocalStorage<ExecutionContext>()
 export function getCurrentContext(): ExecutionContext {
     const context = executionContext.getStore()
     if (!context) {
-        return { isMobile: false, account: {} as any }
+        return { isMobile: false, account: {} as Account }
     }
     return context
 }

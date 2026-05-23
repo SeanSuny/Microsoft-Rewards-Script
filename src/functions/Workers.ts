@@ -173,9 +173,29 @@ export class Workers {
     }
 
     public async doClaimBonusPoints(data: DashboardData) {
-        if (data.pointClaimBannerPromotion && !data.pointClaimBannerPromotion.complete) {
-            await this.bot.activities.doClaimBonusPoints()
+        const pointsActivity = data.pointClaimBannerPromotion
+
+        if (!pointsActivity) {
+            this.bot.logger.info(this.bot.isMobile, 'CLAIM-BONUS-POINTS', 'No claim bonus points banner found')
+            return
         }
+
+        if (pointsActivity.complete) {
+            this.bot.logger.info(
+                this.bot.isMobile,
+                'CLAIM-BONUS-POINTS',
+                `Bonus points have already been claimed | offerId=${pointsActivity.offerId}`
+            )
+            return
+        }
+
+        await this.bot.activities.doClaimBonusPoints()
+
+        this.bot.logger.info(
+            this.bot.isMobile,
+            'CLAIM-BONUS-POINTS',
+            `Bonus points have been claimed | title="${pointsActivity.title}" | offerId=${pointsActivity.offerId}`
+        )
     }
 
     public async doPunchCards(data: DashboardData, page: Page) {

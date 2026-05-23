@@ -44,7 +44,7 @@ export default class BrowserFunc {
                 return response.data.dashboard as DashboardData
             }
             throw new Error('Dashboard data missing from API response')
-        } catch (error) {
+        } catch {
             this.bot.logger.warn(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'API failed, trying HTML fallback')
 
             // Try using script from dashboard page
@@ -359,7 +359,7 @@ export default class BrowserFunc {
                 }
 
                 this.bot.logger.info(this.bot.isMobile, 'CLOSE-BROWSER', 'All browser resources closed.')
-            } catch (closeError) {
+            } catch {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'CLOSE-BROWSER',
