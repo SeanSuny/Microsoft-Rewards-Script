@@ -52,7 +52,7 @@ const executionContext = new AsyncLocalStorage<ExecutionContext>()
 export function getCurrentContext(): ExecutionContext {
     const context = executionContext.getStore()
     if (!context) {
-        return { isMobile: false, account: {} as any }
+        return { isMobile: false, account: {} as Account }
     }
     return context
 }
@@ -65,6 +65,7 @@ interface UserData {
     userName: string
     geoLocale: string
     langCode: string
+    timezoneOffset: string
     initialPoints: number
     currentPoints: number
     gainedPoints: number
@@ -107,6 +108,7 @@ export class MicrosoftRewardsBot {
             userName: '',
             geoLocale: 'US',
             langCode: 'en',
+            timezoneOffset: '60',
             initialPoints: 0,
             currentPoints: 0,
             gainedPoints: 0
@@ -181,7 +183,7 @@ export class MicrosoftRewardsBot {
 
                     // Webhooks, for later expansion?
                     if (webhook.discord?.enabled && webhook.discord.url) {
-                        sendDiscord(webhook.discord.url, content, level)
+                        sendDiscord(webhook.discord.url, content)
                     }
                     if (webhook.ntfy?.enabled && webhook.ntfy.url) {
                         sendNtfy(webhook.ntfy, content, level)
@@ -286,6 +288,7 @@ export class MicrosoftRewardsBot {
             const accountStartTime = Date.now()
             const accountEmail = account.email
             this.userData.userName = this.utils.getEmailUsername(accountEmail)
+            this.userData.timezoneOffset = String(-new Date().getTimezoneOffset())
 
             try {
                 this.logger.info(
@@ -442,12 +445,16 @@ export class MicrosoftRewardsBot {
                     } | App: ${appEarnable?.totalEarnablePoints ?? 0} | ${accountEmail} | locale: ${this.userData.geoLocale}`
                 )
 
+                if (this.config.ensureStreakProtection) {
+                    await this.browser.func.ensureStreakProtection()
+                }
+                if (this.config.workers.doClaimBonusPoints) await this.workers.doClaimBonusPoints(data)
                 if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)
                 if (this.config.workers.doDailySet) await this.workers.doDailySet(data, this.mainMobilePage)
                 if (this.config.workers.doSpecialPromotions) await this.workers.doSpecialPromotions(data)
                 if (this.config.workers.doMorePromotions) await this.workers.doMorePromotions(data, this.mainMobilePage)
 
-                await this.workers.doOtherPromotions();
+                await this.workers.doOtherPromotions()
 
                 if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn()
                 if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn()

@@ -90,7 +90,7 @@ export class Workers {
                     'X-Rewards-AppId': 'SAIOS/32.5.431027001',
                     'X-Rewards-PartnerId': 'startapp',
                     'X-Rewards-Flights': 'rwgobig'
-                },
+                }
             }
 
             const response = await this.bot.axios.request(request)
@@ -101,7 +101,7 @@ export class Workers {
                     'GET-OTHER-PROMOTION-DATA',
                     `API responded with non-zero code: ${response.data.code}`
                 )
-                return;
+                return
             }
 
             const activitiesUncompleted: Record<string, any>[] =
@@ -155,11 +155,11 @@ export class Workers {
                         amount: 1,
                         type: 101,
                         attributes: {
-                            offerid: offerId,
+                            offerid: offerId
                         },
                         country: this.bot.userData.geoLocale,
                         channel: 'SAIOS',
-                        risk_context: {},
+                        risk_context: {}
                     }
 
                     this.bot.logger.debug(
@@ -247,7 +247,7 @@ export class Workers {
                 'OTHER-PROMOTIONS',
                 `All "Other Promotions" items have been completed | totalGainedPoints=${totalGainedPoints} | finalBalance=${this.bot.userData.currentPoints}`
             )
-        } catch (error) {
+        } catch {
             this.bot.logger.warn(this.bot.isMobile, 'GET-OTHER-PROMOTION-DATA', 'API failed')
         }
     }
@@ -349,6 +349,32 @@ export class Workers {
         }
 
         this.bot.logger.info(this.bot.isMobile, 'SPECIAL-ACTIVITY', 'All "Special Activites" items have been completed')
+    }
+
+    public async doClaimBonusPoints(data: DashboardData) {
+        const pointsActivity = data.pointClaimBannerPromotion
+
+        if (!pointsActivity) {
+            this.bot.logger.info(this.bot.isMobile, 'CLAIM-BONUS-POINTS', 'No claim bonus points banner found')
+            return
+        }
+
+        if (pointsActivity.complete) {
+            this.bot.logger.info(
+                this.bot.isMobile,
+                'CLAIM-BONUS-POINTS',
+                `Bonus points have already been claimed | offerId=${pointsActivity.offerId}`
+            )
+            return
+        }
+
+        await this.bot.activities.doClaimBonusPoints()
+
+        this.bot.logger.info(
+            this.bot.isMobile,
+            'CLAIM-BONUS-POINTS',
+            `Bonus points have been claimed | title="${pointsActivity.title}" | offerId=${pointsActivity.offerId}`
+        )
     }
 
     public async doPunchCards(data: DashboardData, page: Page) {

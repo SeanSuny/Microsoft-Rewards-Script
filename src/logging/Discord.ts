@@ -1,6 +1,5 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import PQueue from 'p-queue'
-import type { LogLevel } from './Logger'
 
 const DISCORD_LIMIT = 2000
 
@@ -19,7 +18,7 @@ function truncate(text: string) {
     return text.length <= DISCORD_LIMIT ? text : text.slice(0, DISCORD_LIMIT - 14) + ' …(truncated)'
 }
 
-export async function sendDiscord(discordUrl: string, content: string, level: LogLevel): Promise<void> {
+export async function sendDiscord(discordUrl: string, content: string): Promise<void> {
     if (!discordUrl) return
 
     const request: AxiosRequestConfig = {

@@ -68,7 +68,7 @@ export class UrlReward extends Workers {
             // const formData = new URLSearchParams({
             //     id: offerId,
             //     hash: promotion.hash,
-            //     timeZone: '60',
+            //     timeZone: this.bot.userData.timezoneOffset,
             //     activityAmount: '1',
             //     dbs: '0',
             //     form: '',
@@ -79,18 +79,18 @@ export class UrlReward extends Workers {
             const jsonData = {
                 ActivityCount: 1,
                 ActivityType: panelPromotion.activityType,
-                ActivitySubType: "",
+                ActivitySubType: '',
                 OfferId: offerId,
                 AuthKey: panelPromotion.hash,
                 Channel: this.panelData.channel,
                 PartnerId: this.panelData.partnerId,
-                UserId: this.panelData.userId,
+                UserId: this.panelData.userId
             }
 
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Prepared UrlReward form data | offerId=${offerId} | hash=${panelPromotion.hash} | timeZone=60 | activityAmount=1`
+                `Prepared UrlReward form data | offerId=${offerId} | hash=${panelPromotion.hash} | timeZone=${this.bot.userData.timezoneOffset} | activityAmount=1`
             )
 
             // const request: AxiosRequestConfig = {
