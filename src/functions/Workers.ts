@@ -104,6 +104,9 @@ export class Workers {
                 return
             }
 
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+
             const activitiesUncompleted: Record<string, any>[] =
                 (response.data.response.promotions as Record<string, any>[])?.filter(x => {
                     if (x.attributes.complete == 'True') return false
@@ -111,6 +114,28 @@ export class Workers {
                     if (x.attributes.State == 'locked') return false
                     if (!x.attributes.type) return false
                     if (x.attributes.hidden == 'True') return false
+
+                    const dailySetDate = x.attributes.daily_set_date
+                    if (typeof dailySetDate === 'string') {
+                        const [monthValue, dayValue, yearValue] = dailySetDate.split('/')
+                        const month = Number(monthValue)
+                        const day = Number(dayValue)
+                        const year = Number(yearValue)
+
+                        if (Number.isInteger(month) && Number.isInteger(day) && Number.isInteger(year)) {
+                            const activityDate = new Date(year, month - 1, day)
+
+                            if (
+                                activityDate.getFullYear() === year &&
+                                activityDate.getMonth() === month - 1 &&
+                                activityDate.getDate() === day &&
+                                activityDate > today
+                            ) {
+                                return false
+                            }
+                        }
+                    }
+
                     if (x.attributes.type != 'urlreward') return false
 
                     return true
