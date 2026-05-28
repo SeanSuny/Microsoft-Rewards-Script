@@ -43,10 +43,10 @@ export class ClaimBonusPoints extends Workers {
                 `Prepared ClaimBonusPoints headers | cookieLength=${this.cookieHeader.length} | fingerprintHeaderKeys=${Object.keys(this.fingerprintHeader).length}`
             )
 
-            const formData = new URLSearchParams({
-                timeZone: this.bot.userData.timezoneOffset,
-                __RequestVerificationToken: this.bot.requestToken
-            })
+            // const formData = new URLSearchParams({
+            //     timeZone: this.bot.userData.timezoneOffset,
+            //     __RequestVerificationToken: this.bot.requestToken
+            // })
 
             this.bot.logger.debug(
                 this.bot.isMobile,
@@ -55,15 +55,17 @@ export class ClaimBonusPoints extends Workers {
             )
 
             const request: AxiosRequestConfig = {
-                url: 'https://rewards.bing.com/api/claimallpointsasync?X-Requested-With=XMLHttpRequest',
+                url: 'https://rewards.bing.com/dashboard?ssp=1&setlang=zh-hans&cc=CN&safesearch=moderate',
                 method: 'POST',
                 headers: {
                     ...(this.bot.fingerprint?.headers ?? {}),
                     Cookie: this.cookieHeader,
-                    Referer: 'https://rewards.bing.com/',
-                    Origin: 'https://rewards.bing.com'
+                    Referer: 'https://rewards.bing.com/dashboard?ssp=1&setlang=zh-hans&cc=CN&safesearch=moderate',
+                    Origin: 'https://rewards.bing.com',
+                    'next-router-state-tree': '%5B%22%22%2C%7B%22children%22%3A%5B%22(nav)%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C16%5D',
+                    'next-action': '00cf5ba7699f0e920ffcff223f9e48fea78fd49784'
                 },
-                data: formData
+                data: '[]'
             }
 
             this.bot.logger.debug(
