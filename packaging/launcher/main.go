@@ -10,7 +10,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,12 +33,31 @@ func main() {
 	checkExists(indexJS, "dist\\index.js is missing – the package may be corrupted.")
 	checkExists(patchrightCLI, "node_modules\\patchright\\cli.js is missing – the package may be corrupted.")
 
+	// Ensure config.json and accounts.json exist by copying from example templates if missing
+	configJSON := filepath.Join(exeDir, "dist", "config.json")
+	configExample := filepath.Join(exeDir, "dist", "config.example.json")
+	accountsJSON := filepath.Join(exeDir, "dist", "accounts.json")
+	accountsExample := filepath.Join(exeDir, "dist", "accounts.example.json")
+
+	if !pathExists(configJSON) && pathExists(configExample) {
+		fmt.Println("[First Run] Creating dist\\config.json from template...")
+		if err := copyFile(configExample, configJSON); err != nil {
+			fatal("Failed to copy config.json from template: " + err.Error())
+		}
+	}
+	if !pathExists(accountsJSON) && pathExists(accountsExample) {
+		fmt.Println("[First Run] Creating dist\\accounts.json from template...")
+		if err := copyFile(accountsExample, accountsJSON); err != nil {
+			fatal("Failed to copy accounts.json from template: " + err.Error())
+		}
+	}
+
 	// First-run: install Chromium if browsers/ directory does not exist yet
 	if !pathExists(browsersDir) {
 		fmt.Println("[First Run] Downloading Chromium browser (~200 MB). This only happens once...")
 		fmt.Println()
 
-		install := exec.Command(nodeExe, patchrightCLI, "install", "--only-shell", "chromium")
+		install := exec.Command(nodeExe, patchrightCLI, "install", "chromium")
 		install.Stdout = os.Stdout
 		install.Stderr = os.Stderr
 		install.Env = append(os.Environ(), "PLAYWRIGHT_BROWSERS_PATH="+browsersDir)
@@ -60,11 +81,12 @@ func main() {
 
 	if err := cmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			os.Exit(exitErr.ExitCode())
+			exitWithPause(exitErr.ExitCode())
 		}
 		// Process was likely killed by a signal; exit silently
-		os.Exit(1)
+		exitWithPause(1)
 	}
+	exitWithPause(0)
 }
 
 func resolveExeDir() (string, error) {
@@ -87,11 +109,42 @@ func pathExists(p string) bool {
 func checkExists(p, msg string) {
 	if !pathExists(p) {
 		fmt.Fprintf(os.Stderr, "\nERROR: %s\nPath: %s\n\n", msg, p)
-		os.Exit(1)
+		exitWithPause(1)
 	}
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+	return out.Sync()
+}
+
+
+func exitWithPause(code int) {
+	if isDoubleClicked() {
+		fmt.Println()
+		fmt.Println("Press Enter to exit...")
+		reader := bufio.NewReader(os.Stdin)
+		reader.ReadString('\n')
+	}
+	os.Exit(code)
 }
 
 func fatal(msg string) {
 	fmt.Fprintf(os.Stderr, "\nERROR: %s\n\n", msg)
-	os.Exit(1)
+	exitWithPause(1)
 }

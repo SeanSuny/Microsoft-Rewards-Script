@@ -22,8 +22,10 @@
  *   ├── node.exe                ← bundled Node.js 24 runtime
  *   ├── dist/                   ← compiled application
  *   │   ├── index.js
- *   │   ├── config.json         ← EDIT THIS before running
- *   │   ├── accounts.json       ← EDIT THIS before running
+ *   │   ├── config.example.json  ← configuration template
+ *   │   ├── accounts.example.json← accounts template
+ *   │   ├── config.json         ← auto-created on first run (EDIT THIS)
+ *   │   ├── accounts.json       ← auto-created on first run (EDIT THIS)
  *   │   └── functions/
  *   │       ├── search-queries.json
  *   │       └── bing-search-activity-queries.json
@@ -246,6 +248,20 @@ function download(url, destPath) {
     // ── 8. Copy application files ─────────────────────────────────────────────
     log('Copying application files...')
     copyDir(path.join(PROJECT_ROOT, 'dist'),        path.join(PACKAGE_DIR, 'dist'))
+
+    // Exclude sensitive user configurations from the build output
+    const sensitiveConfigs = ['config.json', 'accounts.json']
+    for (const file of sensitiveConfigs) {
+        const p = path.join(PACKAGE_DIR, 'dist', file)
+        if (fs.existsSync(p)) {
+            fs.unlinkSync(p)
+        }
+    }
+    // Ship only the clean example templates
+    copyFileSync(path.join(PROJECT_ROOT, 'src', 'config.example.json'),   path.join(PACKAGE_DIR, 'dist', 'config.example.json'))
+    copyFileSync(path.join(PROJECT_ROOT, 'src', 'accounts.example.json'), path.join(PACKAGE_DIR, 'dist', 'accounts.example.json'))
+    ok('Clean configuration templates placed in dist/ (user configs excluded)')
+
     // node_modules comes from STAGING_DIR, not from the project root
     copyDir(path.join(STAGING_DIR, 'node_modules'), path.join(PACKAGE_DIR, 'node_modules'))
     copyFileSync(path.join(STAGING_DIR, 'package.json'),      path.join(PACKAGE_DIR, 'package.json'))
@@ -263,7 +279,8 @@ function download(url, destPath) {
     ok('node.exe placed')
 
     // Create empty runtime directories
-    ensureDir(path.join(PACKAGE_DIR, 'browsers'))
+    // NOTE: browsers/ is intentionally NOT pre-created here.
+    //       The launcher checks for its absence to trigger first-run Chromium download.
     ensureDir(path.join(PACKAGE_DIR, 'diagnostics'))
     ok('Runtime directories created')
 
@@ -324,13 +341,13 @@ Microsoft Rewards Script – Portable Edition  v${version}
 
 QUICK START
 -----------
-1. Open dist\\config.json    and configure your preferences.
-2. Open dist\\accounts.json  and add your Microsoft account(s).
-3. Double-click microsoft-rewards.exe
-
-On the very first launch, the launcher will automatically download the
-Chromium browser (~200 MB). This only happens once; all subsequent runs
-start instantly.
+1. Double-click microsoft-rewards.exe. On the very first run, it will:
+   a) Automatically create config.json and accounts.json in the dist/ folder.
+   b) Download the Chromium browser (~200 MB).
+2. After the launcher finishes initializing, close it.
+3. Open dist\\config.json and configure your preferences.
+4. Open dist\\accounts.json and add your Microsoft account(s).
+5. Double-click microsoft-rewards.exe again to run the script.
 
 DIRECTORY LAYOUT
 ----------------
@@ -338,8 +355,10 @@ microsoft-rewards.exe         Double-click to run
 node.exe                      Bundled Node.js runtime (do not delete)
 dist\\
   index.js                    Application entry point
-  config.json                 Your configuration file  ← EDIT THIS
-  accounts.json               Your accounts file       ← EDIT THIS
+  config.example.json         Configuration template
+  accounts.example.json       Accounts template
+  config.json                 Your configuration file (auto-created on first run)
+  accounts.json               Your accounts file (auto-created on first run)
   browser\\sessions\\          Login sessions (auto-generated)
   functions\\                 Search query data
 node_modules\\                Runtime dependencies (do not delete)
@@ -348,7 +367,7 @@ diagnostics\\                 Diagnostic output
 
 CONFIGURATION
 -------------
-Edit dist\\config.json and dist\\accounts.json before the first run.
+Edit dist\\config.json and dist\\accounts.json before running.
 Refer to the project README for all available options:
   https://github.com/Netsky09/Microsoft-Rewards-Script
 
@@ -368,8 +387,8 @@ To update to a newer version:
 TROUBLESHOOTING
 ---------------
 - If the first-run Chromium download fails, check your internet connection
-  and try again. The browsers\\ directory will be empty on a failed download;
-  simply delete it and re-run microsoft-rewards.exe.
+  and try again. Delete the browsers\\ directory (if it was partially created)
+  and re-run microsoft-rewards.exe.
 - If you get a missing-DLL or Node.js error, ensure the package was extracted
   fully and that no anti-virus quarantined any files.
 - For further help: https://github.com/Netsky09/Microsoft-Rewards-Script/issues
