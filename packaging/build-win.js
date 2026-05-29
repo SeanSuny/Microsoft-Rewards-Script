@@ -49,7 +49,7 @@ const PACKAGING_DIR  = path.resolve(__dirname)           // …/packaging/
 const PROJECT_ROOT   = path.resolve(PACKAGING_DIR, '..') // …/Microsoft-Rewards-Script/
 const OUTPUT_DIR     = path.join(PACKAGING_DIR, 'output')
 const CACHE_DIR      = path.join(PACKAGING_DIR, '.cache')
-const LAUNCHER_DIR   = path.join(PACKAGING_DIR, 'launcher')
+const LAUNCHER_DIR    = path.join(PACKAGING_DIR, 'launcher')
 // Isolated staging dir – npm ci runs here so the project's node_modules is NEVER touched
 const STAGING_DIR    = path.join(PACKAGING_DIR, '.staging')
 
@@ -162,20 +162,17 @@ function download(url, destPath) {
 
     // ── 1. Prerequisites ─────────────────────────────────────────────────────
     log('Checking prerequisites...')
-    try { execSync('npm --version', { stdio: 'ignore' }) } catch { die('npm not found in PATH') }
+    try { execSync('npm --version',  { stdio: 'ignore' }) } catch { die('npm not found in PATH') }
     try { execSync('node --version', { stdio: 'ignore' }) } catch { die('node not found in PATH') }
-    // Check for zip (macOS/Linux)
+    try { execSync('go version',     { stdio: 'ignore' }) } catch { die('Go not found in PATH. Install it: brew install go') }
+    // Check for zip / unzip (macOS/Linux)
     if (os.platform() !== 'win32') {
         try { execSync('zip --version', { stdio: 'ignore' }) } catch { die('zip utility not found. Install it (e.g. brew install zip)') }
         try { execSync('unzip -v',      { stdio: 'ignore' }) } catch { die('unzip utility not found.') }
     }
-    ok('All prerequisites satisfied')
-
-    // ── 2. Install build deps (caxa) ─────────────────────────────────────────
-    log('Installing build tooling (caxa)...')
-    ensureDir(LAUNCHER_DIR)
-    run('npm install --save-dev caxa@3', { cwd: PACKAGING_DIR })
-    ok('caxa ready')
+    // Print Go version so it's visible in build log
+    const goVer = execSync('go version', { encoding: 'utf8' }).trim()
+    ok(`All prerequisites satisfied  (${goVer})`)
 
     // ── 3. Compile TypeScript ─────────────────────────────────────────────────
     log('Compiling TypeScript...')
@@ -270,24 +267,27 @@ function download(url, destPath) {
     ensureDir(path.join(PACKAGE_DIR, 'diagnostics'))
     ok('Runtime directories created')
 
-    // ── 9. Build microsoft-rewards.exe with caxa ──────────────────────────────
-    log('Building microsoft-rewards.exe (caxa)...')
-    const caxaBin = path.join(PACKAGING_DIR, 'node_modules', '.bin', 'caxa')
-    if (!fs.existsSync(caxaBin)) die(`caxa binary not found at ${caxaBin}`)
+    // ── 9. Cross-compile launcher → true Windows PE x64 .exe via Go ──────────
+    log('Building microsoft-rewards.exe (Go cross-compile → Windows x64)...')
+    if (!fs.existsSync(LAUNCHER_DIR)) die(`Go launcher source not found at ${LAUNCHER_DIR}`)
 
-    // caxa bundles the launcher JS + its own Node.js runtime into a .exe.
-    // The launcher .exe is then placed into the portable package directory.
-    // IMPORTANT: The launcher uses process.execPath at runtime to find the
-    // package root – it relies on the .exe sitting at <pkgRoot>/microsoft-rewards.exe.
     const caxaOut = path.join(PACKAGE_DIR, 'microsoft-rewards.exe')
+    // GOOS=windows GOARCH=amd64 produces a genuine Windows PE x64 binary.
+    // -s -w strips debug symbols (reduces size).
+    // CGO_ENABLED=0 ensures a fully static binary with no external DLL dependencies.
     run(
-        `"${caxaBin}" \
-            --input "${LAUNCHER_DIR}" \
-            --output "${caxaOut}" \
-            -- "{{caxa}}/node_modules/.bin/node" "{{caxa}}/main.js"`,
-        { cwd: PACKAGING_DIR }
+        `GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
+         go build -ldflags="-s -w" -o "${caxaOut}" .`,
+        { cwd: LAUNCHER_DIR }
     )
+
+    // Verify it really is a Windows PE binary
+    const fileOut = execSync(`file "${caxaOut}"`, { encoding: 'utf8' }).trim()
+    if (!fileOut.includes('PE32+') && !fileOut.includes('PE32')) {
+        die(`Built .exe does not appear to be a Windows PE binary:\n  ${fileOut}`)
+    }
     ok(`microsoft-rewards.exe built (${formatBytes(fs.statSync(caxaOut).size)})`)
+    info(fileOut)
 
     // ── 10. Write README ──────────────────────────────────────────────────────
     log('Writing README.txt...')
