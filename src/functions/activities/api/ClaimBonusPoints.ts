@@ -62,6 +62,7 @@ export class ClaimBonusPoints extends Workers {
                     Cookie: this.cookieHeader,
                     Referer: 'https://rewards.bing.com/dashboard?ssp=1&setlang=zh-hans&cc=CN&safesearch=moderate',
                     Origin: 'https://rewards.bing.com',
+                    'Content-Type': 'text/plain;charset=UTF-8',
                     'next-router-state-tree': '%5B%22%22%2C%7B%22children%22%3A%5B%22(nav)%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C0%5D%7D%2Cnull%2Cnull%2C16%5D',
                     'next-action': '00cf5ba7699f0e920ffcff223f9e48fea78fd49784'
                 },
