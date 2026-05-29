@@ -1,0 +1,10 @@
+{
+  "name": "microsoft-rewards-launcher",
+  "version": "1.0.0",
+  "description": "Portable launcher for Microsoft Rewards Script",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "build": "node ../build-win.js"
+  }
+}
